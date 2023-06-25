@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>System Audio Demo</title>
+</head>
+<body>
+  <h1>System Audio Demo</h1>
+  
+  <video id="recordedVideo" controls></video>
+  
+  <button id="recordButton">Start Recording</button>
+  
+  <script src="https://cdn.WebRTC-Experiment.com/RecordRTC.js"></script>
+  <script>
+    let screenStream;
+    let audioStream;
+    let recorder;
+    let isRecording = false;
+    
+    function toggleRecording() {
+      if (isRecording) {
+        stopRecording();
+        document.getElementById('recordButton').textContent = 'Start Recording';
+      } else {
+        startRecording();
+        document.getElementById('recordButton').textContent = 'Stop Recording';
+      }
+      isRecording = !isRecording;
+    }
+    
+    function startRecording() {
+      navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        .then(function (stream) {
+          screenStream = stream;
+
+          navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(function (audio) {
+              audioStream = audio;
+
+              const mixedStream = new MediaStream();
+              mixedStream.addTrack(screenStream.getVideoTracks()[0]);
+              mixedStream.addTrack(audioStream.getAudioTracks()[0]);
+
+              recorder = new RecordRTC(mixedStream, {
+                type: 'video'
+              });
+              recorder.startRecording();
+
+              console.log('Recording started...');
+            })
+            .catch(function (error) {
+              console.error('Error accessing audio:', error);
+            });
+        })
+        .catch(function (error) {
+          console.error('Error accessing screen:', error);
+        });
+    }
+
+    function stopRecording() {
+      recorder.stopRecording(function () {
+        const blob = recorder.getBlob();
+
+        const recordedVideo = document.getElementById('recordedVideo');
+        recordedVideo.src = URL.createObjectURL(blob);
+        recordedVideo.play();
+
+        screenStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+        audioStream.getTracks().forEach(function (track) {
+          track.stop();
+        });
+
+        console.log('Recording stopped...');
+      });
+    }
+
+    document.getElementById('recordButton').addEventListener('click', toggleRecording);
+  </script>
+</body>
+</html>
